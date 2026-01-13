@@ -20,6 +20,27 @@ WARNED = False
 def loadCam(args, id, cam_info, resolution_scale, is_nerf_synthetic, is_test_dataset):
     image = Image.open(cam_info.image_path)
 
+    guidance = dict()
+    if cam_info.lidar_depth_path != "":
+        try:          
+            depth = np.load(cam_info.lidar_depth_path)
+            mask = depth['mask'].astype(np.bool_)
+            value = depth['value'].astype(np.float32)
+            depth = np.zeros_like(mask).astype(np.float32)
+            depth[mask] = value
+            guidance['lidar_depth'] = depth
+        except FileNotFoundError:
+            print(f"Error: The depth file at path '{cam_info.lidar_depth_path}' was not found.")
+            raise
+        except IOError:
+            print(f"Error: Unable to open the image file '{cam_info.lidar_depth_path}'. It may be corrupted or an unsupported format.")
+            raise
+        except Exception as e:
+            print(f"An unexpected error occurred when trying to read depth at {cam_info.lidar_depth_path}: {e}")
+            raise
+    else:
+        guidance['lidar_depth'] = None
+
     if cam_info.depth_path != "":
         try:
             depth_mm = cv2.imread(cam_info.depth_path, -1).astype(np.float32)
@@ -80,7 +101,7 @@ def loadCam(args, id, cam_info, resolution_scale, is_nerf_synthetic, is_test_dat
 
     return Camera(resolution, colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, primx=cam_info.primx, primy=cam_info.primy,
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY,
-                  image=image, depthmap=depthmap, mask=mask, 
+                  image=image, guidance=guidance, depthmap=depthmap, mask=mask, 
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device,
                   train_test_exp=args.train_test_exp, is_test_dataset=is_test_dataset, is_test_view=cam_info.is_test)
 

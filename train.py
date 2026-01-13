@@ -22,6 +22,7 @@ from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
+import numpy as np
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
@@ -114,7 +115,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         render_pkg = render(viewpoint_cam, gaussians, pipe, bg, use_trained_exp=dataset.train_test_exp, separate_sh=SPARSE_ADAM_AVAILABLE)
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
-
+        depth = render_pkg['depth'].squeeze(0)  # [H, W]
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
 
@@ -131,12 +132,27 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim_value)
 
-        # Depth regularization
-        Ll1depth_pure = 0.0
-        if depth_l1_weight(iteration) > 0 and viewpoint_cam.depth_reliable:
-            Ll1depth = 0
-        else:
-            Ll1depth = 0
+        # lidar depth loss
+        if opt.lambda_depth_lidar > 0 and 'lidar_depth' in viewpoint_cam.guidance:
+            lidar_depth = viewpoint_cam.guidance['lidar_depth']
+
+            H, W = dynamic_mask.shape[-2:]
+
+            if isinstance(lidar_depth, np.ndarray):
+                lidar_depth = torch.from_numpy(lidar_depth)
+            lidar_depth = lidar_depth.to(depth.device).float()
+
+            if lidar_depth.numel() != H * W:
+                raise ValueError(f"lidar_depth.numel()={lidar_depth.numel()} 和 H*W={H * W} 不一致")
+
+            lidar_depth = lidar_depth.view(H, W)  # [H, W]
+
+            depth_mask = torch.logical_and(lidar_depth > 0.0, dynamic_mask.squeeze(0))  # [H, W]
+            depth_error = torch.abs((depth[depth_mask] - lidar_depth[depth_mask]))
+
+            depth_error, _ = torch.topk(depth_error, int(0.95 * depth_error.size(0)), largest=False)
+            lidar_depth_loss = depth_error.mean()
+            loss += opt.lambda_depth_lidar * lidar_depth_loss
 
         loss.backward()
 
@@ -145,7 +161,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         with torch.no_grad():
             # Progress bar
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
-            ema_Ll1depth_for_log = 0.4 * Ll1depth + 0.6 * ema_Ll1depth_for_log
+            ema_Ll1depth_for_log = 0.4 * lidar_depth_loss + 0.6 * ema_Ll1depth_for_log
             n_gauss = scene.gaussians.get_xyz.shape[0]
 
             if iteration % 10 == 0:

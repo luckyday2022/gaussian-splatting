@@ -33,6 +33,7 @@ class CameraInfo(NamedTuple):
     primy: float
     image_path: str
     image_name: str
+    lidar_depth_path: str
     depth_path: str
     mask_path: str
     width: int
@@ -70,7 +71,7 @@ def getNerfppNorm(cam_info):
 
     return {"translate": translate, "radius": radius}
 
-def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, depths_folder, masks_folder, test_cam_names_list):
+def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, lidar_depths_folder, depths_folder, masks_folder, test_cam_names_list):
     cam_infos = []
     for idx, key in enumerate(cam_extrinsics):
         sys.stdout.write('\r')
@@ -112,8 +113,11 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, depths_fold
         depth_path = os.path.join(depths_folder, f"{extr.name[:-n_remove2]}_depth.png") if depths_folder != "" else ""
         mask_path = os.path.join(masks_folder, f"{extr.name[:-n_remove]}.png") if masks_folder != "" else ""
 
+        # lidar depth(.npz):lidar_depths_folder/timestamp.npz
+        lidar_depth_path = os.path.join(lidar_depths_folder, f"{extr.name[:-n_remove2]}.npz") if lidar_depths_folder != "" else ""
+
         cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, primx=primx, primy=primy,
-                              image_path=image_path, image_name=image_name, depth_path=depth_path, mask_path=mask_path,
+                              image_path=image_path, image_name=image_name, lidar_depth_path=lidar_depth_path, depth_path=depth_path, mask_path=mask_path,
                               width=width, height=height, is_test=image_name in test_cam_names_list)
         cam_infos.append(cam_info)
 
@@ -156,7 +160,7 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
-def readColmapSceneInfo(path, images, depths, masks, eval, train_test_exp, llffhold=8):
+def readColmapSceneInfo(path, images, lidar_depths, depths, masks, eval, train_test_exp, llffhold=8):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
         cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
@@ -189,6 +193,7 @@ def readColmapSceneInfo(path, images, depths, masks, eval, train_test_exp, llffh
     cam_infos_unsorted = readColmapCameras(
         cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics,
         images_folder=os.path.join(path, reading_dir), 
+        lidar_depths_folder= os.path.join(path, lidar_depths) if lidar_depths != "" else "",
         depths_folder=os.path.join(path, depths) if depths != "" else "", 
         masks_folder=os.path.join(path, masks) if masks != "" else "",
         test_cam_names_list=test_cam_names_list)

@@ -50,6 +50,7 @@ class ModelParams(ParamGroup):
         self._source_path = ""
         self._model_path = ""
         self._images = "images"
+        self._lidar_depths = ""
         self._depths = ""
         self.masks = ""
         self._resolution = -1
@@ -104,6 +105,9 @@ class OptimizationParams(ParamGroup):
         self.depth_l1_weight_final = 0.01
         self.random_background = False
         self.optimizer_type = "default"
+
+        self.lambda_depth_lidar = 0.01
+        
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
