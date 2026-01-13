@@ -17,7 +17,7 @@ from utils.general_utils import PILtoTorch
 import cv2
 
 class Camera(nn.Module):
-    def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, depth_params, image, invdepthmap, mask, 
+    def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, image, depthmap, mask, 
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
                  train_test_exp = False, is_test_dataset = False, is_test_view = False
@@ -32,6 +32,7 @@ class Camera(nn.Module):
         self.FoVy = FoVy
         self.image_name = image_name
 
+        self.ori_depthmap = depthmap if depthmap is not None else None
         self.ori_mask = mask if mask is not None else None
 
         try:
@@ -59,25 +60,15 @@ class Camera(nn.Module):
         self.image_width = self.original_image.shape[2]
         self.image_height = self.original_image.shape[1]
 
-        self.invdepthmap = None
+        self.depthmap = depthmap
         self.depth_reliable = False
-        if invdepthmap is not None:
-            self.depth_mask = torch.ones_like(self.alpha_mask)
-            self.invdepthmap = cv2.resize(invdepthmap, resolution)
-            self.invdepthmap[self.invdepthmap < 0] = 0
+        if depthmap is not None:
+            if depthmap.ndim != 2:
+                self.depthmap = depthmap[..., 0]
+            self.depthmap_mask = (depthmap > 0).astype(np.float32)
             self.depth_reliable = True
-
-            if depth_params is not None:
-                if depth_params["scale"] < 0.2 * depth_params["med_scale"] or depth_params["scale"] > 5 * depth_params["med_scale"]:
-                    self.depth_reliable = False
-                    self.depth_mask *= 0
-                
-                if depth_params["scale"] > 0:
-                    self.invdepthmap = self.invdepthmap * depth_params["scale"] + depth_params["offset"]
-
-            if self.invdepthmap.ndim != 2:
-                self.invdepthmap = self.invdepthmap[..., 0]
-            self.invdepthmap = torch.from_numpy(self.invdepthmap[None]).to(self.data_device)
+            self.depthmap = torch.from_numpy(self.depthmap[None]).to(self.data_device)
+            self.depthmap_mask  = torch.from_numpy(self.depthmap_mask[None]).to(self.data_device)
 
         self.mask = None
         if mask is not None:
