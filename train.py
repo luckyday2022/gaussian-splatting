@@ -146,9 +146,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             # Progress bar
             ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
             ema_Ll1depth_for_log = 0.4 * Ll1depth + 0.6 * ema_Ll1depth_for_log
+            n_gauss = scene.gaussians.get_xyz.shape[0]
 
             if iteration % 10 == 0:
-                progress_bar.set_postfix({"Loss": f"{ema_loss_for_log:.{7}f}", "Depth Loss": f"{ema_Ll1depth_for_log:.{7}f}"})
+                progress_bar.set_postfix({"Loss": f"{ema_loss_for_log:.{7}f}", "L1 Loss": f"{Ll1.item():.{7}f}", "Depth Loss": f"{ema_Ll1depth_for_log:.{7}f}", "PtsK": f"{n_gauss / 1e3:.1f}k"})
                 progress_bar.update(10)
             if iteration == opt.iterations:
                 progress_bar.close()

@@ -118,8 +118,19 @@ def fetchPly(path):
     plydata = PlyData.read(path)
     vertices = plydata['vertex']
     positions = np.vstack([vertices['x'], vertices['y'], vertices['z']]).T
-    colors = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T / 255.0
-    normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
+
+    color_fields = {'red', 'green', 'blue'}
+    if color_fields.issubset(vertices.data.dtype.names):
+        colors = np.vstack([vertices['red'], vertices['green'], vertices['blue']]).T / 255.0
+    else:
+        print("points.ply is no color!")
+        colors = np.ones_like(positions) * 0.5  
+
+    if {'nx', 'ny', 'nz'}.issubset(vertices.data.dtype.names):
+        normals = np.vstack([vertices['nx'], vertices['ny'], vertices['nz']]).T
+    else:
+        print("points.ply is no normal!")
+        normals = np.zeros_like(positions)  
     return BasicPointCloud(points=positions, colors=colors, normals=normals)
 
 def storePly(path, xyz, rgb):
@@ -179,6 +190,9 @@ def readColmapSceneInfo(path, images, depths, masks, eval, train_test_exp, llffh
 
     train_cam_infos = [c for c in cam_infos if train_test_exp or not c.is_test]
     test_cam_infos = [c for c in cam_infos if c.is_test]
+
+    print("Number of test cams: ", len(test_cam_infos))
+    print("Number of train cams: ", len(train_cam_infos))
 
     nerf_normalization = getNerfppNorm(train_cam_infos)
 
