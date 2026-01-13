@@ -46,7 +46,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     if not SPARSE_ADAM_AVAILABLE and opt.optimizer_type == "sparse_adam":
         sys.exit(f"Trying to use sparse adam but it is not installed, please install the correct rasterizer using pip install [3dgs_accel].")
 
-    if dataset.masks is not "":
+    if dataset.masks is not None:
         print("===>Using dynamic masks for training: [{}]".format(os.path.join(dataset.source_path, dataset.masks)))
 
     first_iter = 0

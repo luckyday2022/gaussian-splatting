@@ -70,6 +70,12 @@ class PipelineParams(ParamGroup):
         self.compute_cov3D_python = False
         self.debug = False
         self.antialiasing = False
+
+        # ====== gsplat render ======
+        self.use_gsplat = True
+        self.gsplat_tile_size = 16
+        self.gsplat_use_depth = True
+        self.gsplat_absgrad = True
         super().__init__(parser, "Pipeline Parameters")
 
 class OptimizationParams(ParamGroup):
