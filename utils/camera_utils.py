@@ -42,6 +42,12 @@ def loadCam(args, id, cam_info, resolution_scale, is_nerf_synthetic, is_test_dat
     if cam_info.mask_path != "":
         try:
             mask = cv2.imread(cam_info.mask_path, cv2.IMREAD_GRAYSCALE).astype(np.float32) / 255.0
+            # 如果原始的mask图片中白色是动态物体部分
+            mask = 1- mask
+            ## blur mask border
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (20, 20))
+            mask = cv2.erode(mask, kernel)
+            mask = cv2.GaussianBlur(mask, (5, 5), 0)
         except FileNotFoundError:
             print(f"Error: The mask file at path '{cam_info.mask_path}' was not found.")
             raise
