@@ -78,7 +78,7 @@ def loadCam(args, id, cam_info, resolution_scale, is_nerf_synthetic, is_test_dat
         scale = float(global_down) * float(resolution_scale)
         resolution = (int(orig_w / scale), int(orig_h / scale))
 
-    return Camera(resolution, colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, 
+    return Camera(resolution, colmap_id=cam_info.uid, R=cam_info.R, T=cam_info.T, primx=cam_info.primx, primy=cam_info.primy,
                   FoVx=cam_info.FovX, FoVy=cam_info.FovY,
                   image=image, depthmap=depthmap, mask=mask, 
                   image_name=cam_info.image_name, uid=id, data_device=args.data_device,

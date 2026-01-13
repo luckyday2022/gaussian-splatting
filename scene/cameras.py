@@ -17,7 +17,7 @@ from utils.general_utils import PILtoTorch
 import cv2
 
 class Camera(nn.Module):
-    def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, image, depthmap, mask, 
+    def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, primx, primy, image, depthmap, mask, 
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
                  train_test_exp = False, is_test_dataset = False, is_test_view = False
@@ -32,6 +32,10 @@ class Camera(nn.Module):
         self.FoVy = FoVy
         self.image_name = image_name
 
+        self.resolution = resolution
+        self.primx = primx
+        self.primy = primy
+        self.ori_image = image
         self.ori_depthmap = depthmap if depthmap is not None else None
         self.ori_mask = mask if mask is not None else None
 

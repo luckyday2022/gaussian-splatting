@@ -29,6 +29,8 @@ class CameraInfo(NamedTuple):
     T: np.array
     FovY: np.array
     FovX: np.array
+    primx: float
+    primy: float
     image_path: str
     image_name: str
     depth_path: str
@@ -86,10 +88,14 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, depths_fold
         T = np.array(extr.tvec)
 
         if intr.model=="SIMPLE_PINHOLE":
+            primx = float(intr.params[1]) / width
+            primy = float(intr.params[2]) / height
             focal_length_x = intr.params[0]
             FovY = focal2fov(focal_length_x, height)
             FovX = focal2fov(focal_length_x, width)
         elif intr.model=="PINHOLE":
+            primx = float(intr.params[2]) / width
+            primy = float(intr.params[3]) / height
             focal_length_x = intr.params[0]
             focal_length_y = intr.params[1]
             FovY = focal2fov(focal_length_y, height)
@@ -106,7 +112,7 @@ def readColmapCameras(cam_extrinsics, cam_intrinsics, images_folder, depths_fold
         depth_path = os.path.join(depths_folder, f"{extr.name[:-n_remove2]}_depth.png") if depths_folder != "" else ""
         mask_path = os.path.join(masks_folder, f"{extr.name[:-n_remove]}.png") if masks_folder != "" else ""
 
-        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX,
+        cam_info = CameraInfo(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, primx=primx, primy=primy,
                               image_path=image_path, image_name=image_name, depth_path=depth_path, mask_path=mask_path,
                               width=width, height=height, is_test=image_name in test_cam_names_list)
         cam_infos.append(cam_info)
